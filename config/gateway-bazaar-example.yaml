@@ -1,0 +1,366 @@
+# X402 Gateway Configuration Example - With Bazaar Discoverable
+#
+# This is a configuration example with Bazaar discoverable functionality enabled
+# Copy this file to gateway.yaml and modify according to your needs
+
+# =============================================================================
+# Payment Profile Configuration
+# =============================================================================
+x402_payment:
+  # Base Mainnet - Production environment (requires CDP API Keys)
+  - name: base-mainnet
+    chain: base
+    # Use CDP Facilitator (required for Bazaar registration)
+    facilitator_url: 'https://api.cdp.coinbase.com/platform/v2/x402/facilitator'
+    address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e'  # Your receiving address
+    asset: '0x036CbD53842c5426634e7929541eC2318f3dCF7e'    # USDC contract address
+    token_name: 'USDC'
+
+  # Base Sepolia - Testnet
+  - name: base-testnet
+    chain: base-sepolia
+    facilitator_url: 'https://api.cdp.coinbase.com/platform/v2/x402/facilitator'
+    address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+    asset: '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+    token_name: 'USDC'
+
+  # Solana Mainnet - Production environment
+  - name: solana-mainnet
+    chain: solana
+    # Use standard X402 Facilitator or CDP Facilitator
+    facilitator_url: 'https://x402.org/facilitator'
+    address: 'YourSolanaWalletAddress111111111111111111111'  # Your Solana receiving address (Base58)
+    asset: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'   # USDC SPL Token address
+    token_name: 'USDC'
+
+  # Solana Devnet - Development/Testnet
+  - name: solana-devnet
+    chain: solana-devnet
+    facilitator_url: 'https://x402.org/facilitator'
+    address: 'YourSolanaDevnetWalletAddress11111111111111'  # Your Solana Devnet receiving address
+    asset: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'   # USDC SPL Token (Devnet)
+    token_name: 'USDC'
+
+# =============================================================================
+# Router Configuration
+# =============================================================================
+x402_routers:
+  # Lego API Router
+  - name: lego
+    path: '/lego'
+    proxy_pass: 'http://localhost:3322'
+
+    # Passthrough paths (no payment required)
+    passthrough:
+      - "/lego/health"
+      - "/lego/docs/*"
+      - "/lego/openapi.json"
+
+    # Protected endpoint configuration
+    x402_config:
+      # Endpoint 1: Smart query (with Bazaar registration enabled)
+      - name: query
+        path: '/api/v1/query'
+        method: 'POST'
+        payment: base-mainnet
+        price: '0.01'  # $0.01 USDC
+        timeout_ms: 300000
+        metadata:
+          # Enable Bazaar discovery
+          discoverable: true
+
+          # Endpoint description (will be displayed in Bazaar)
+          description: 'Query blockchain data with natural language. Supports Base, Ethereum, and other chains.'
+
+          # Input parameter schema (helps AI agents understand how to call)
+          inputSchema:
+            bodyParams:
+              question:
+                type: string
+                description: 'Natural language query about blockchain data'
+                required: true
+                example: 'What is the total transaction count on Base in the last 24 hours?'
+                minLength: 10
+                maxLength: 500
+              source:
+                type: string
+                description: 'Data source to query'
+                enum: ['database', 'blockchain', 'indexer']
+                default: 'database'
+              threshold:
+                type: number
+                description: 'Confidence threshold for semantic search results'
+                minimum: 0
+                maximum: 1
+                default: 0.7
+              options:
+                type: object
+                description: 'Additional query options'
+                properties:
+                  limit:
+                    type: number
+                    description: 'Maximum number of results'
+                    default: 10
+                  format:
+                    type: string
+                    description: 'Response format'
+                    enum: ['json', 'table', 'chart']
+                    default: 'json'
+
+          # Output result schema
+          outputSchema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                description: 'Whether the query was successful'
+              data:
+                type: object
+                description: 'Query results'
+                properties:
+                  query:
+                    type: string
+                    description: 'Original query'
+                  result:
+                    type: object
+                    description: 'Query result data'
+                  confidence:
+                    type: number
+                    description: 'Confidence score of the result'
+              timestamp:
+                type: string
+                description: 'ISO 8601 timestamp of query execution'
+              gateway:
+                type: object
+                description: 'Gateway metadata'
+
+      # Endpoint 2: Similar query search (Bazaar registration disabled - internal use only)
+      - name: query-similar
+        path: '/api/v1/query/similar'
+        method: 'GET'
+        payment: base-mainnet
+        price: '0.005'  # $0.005 USDC
+        timeout_ms: 60000
+        metadata:
+          discoverable: false  # Not registered to Bazaar
+          description: 'Find similar queries in history (internal use only)'
+
+      # Endpoint 3: AI data analysis (advanced feature, with Bazaar registration enabled)
+      - name: ai-analysis
+        path: '/api/v1/analyze'
+        method: 'POST'
+        payment: base-mainnet
+        price: '0.05'  # $0.05 USDC (more complex analysis)
+        timeout_ms: 600000
+        metadata:
+          discoverable: true
+          description: 'AI-powered blockchain data analysis with advanced insights'
+
+          inputSchema:
+            bodyParams:
+              query:
+                type: string
+                description: 'Analysis request in natural language'
+                required: true
+                example: 'Analyze the trading patterns of USDC on Base for the last week'
+              options:
+                type: object
+                properties:
+                  model:
+                    type: string
+                    description: 'AI model to use for analysis'
+                    enum: ['gpt-4', 'claude-3-opus', 'deepseek-v3']
+                    default: 'deepseek-v3'
+                  depth:
+                    type: string
+                    description: 'Analysis depth'
+                    enum: ['quick', 'standard', 'deep']
+                    default: 'standard'
+                  includeCharts:
+                    type: boolean
+                    description: 'Include visualization data'
+                    default: false
+
+          outputSchema:
+            type: object
+            properties:
+              analysis:
+                type: string
+                description: 'Detailed analysis results'
+              insights:
+                type: array
+                items:
+                  type: string
+                description: 'Key insights discovered'
+              confidence:
+                type: number
+                description: 'Overall confidence score'
+              sources:
+                type: array
+                items:
+                  type: string
+                description: 'Data sources used for analysis'
+              charts:
+                type: array
+                items:
+                  type: object
+                description: 'Visualization data (if requested)'
+
+  # Example: Weather API Router (demonstrates integration with other services)
+  - name: weather
+    path: '/weather'
+    proxy_pass: 'http://localhost:4000'
+
+    passthrough:
+      - "/weather/health"
+
+    x402_config:
+      # Weather query endpoint
+      - name: current
+        path: '/api/current'
+        method: 'GET'
+        payment: base-testnet  # Using testnet
+        price: '0.001'  # $0.001 USDC (low-price service)
+        timeout_ms: 30000
+        metadata:
+          discoverable: true
+          description: 'Get current weather data for any location worldwide'
+
+          inputSchema:
+            queryParams:
+              location:
+                type: string
+                description: 'City name, coordinates, or location identifier'
+                required: true
+                example: 'San Francisco, CA'
+              units:
+                type: string
+                description: 'Temperature units'
+                enum: ['metric', 'imperial', 'kelvin']
+                default: 'metric'
+
+          outputSchema:
+            type: object
+            properties:
+              location:
+                type: string
+                description: 'Location name'
+              temperature:
+                type: number
+                description: 'Current temperature'
+              conditions:
+                type: string
+                description: 'Weather conditions'
+              humidity:
+                type: number
+                description: 'Humidity percentage'
+              timestamp:
+                type: string
+                description: 'Data timestamp'
+
+  # Example: Solana Data API Router (demonstrates Solana network integration)
+  - name: solana-data
+    path: '/solana'
+    proxy_pass: 'http://localhost:5000'
+
+    passthrough:
+      - "/solana/health"
+      - "/solana/docs/*"
+
+    x402_config:
+      # Solana account query endpoint (using Solana Devnet payment)
+      - name: account-info
+        path: '/api/account'
+        method: 'GET'
+        payment: solana-devnet  # Using Solana Devnet
+        price: '0.002'  # $0.002 USDC
+        timeout_ms: 30000
+        metadata:
+          discoverable: true
+          description: 'Get Solana account information including balance, data, and owner'
+
+          inputSchema:
+            queryParams:
+              address:
+                type: string
+                description: 'Solana account address (Base58 encoded)'
+                required: true
+                example: 'DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK'
+              encoding:
+                type: string
+                description: 'Data encoding format'
+                enum: ['base58', 'base64', 'jsonParsed']
+                default: 'jsonParsed'
+
+          outputSchema:
+            type: object
+            properties:
+              address:
+                type: string
+                description: 'Account address'
+              lamports:
+                type: number
+                description: 'Account balance in lamports'
+              owner:
+                type: string
+                description: 'Program that owns this account'
+              data:
+                type: object
+                description: 'Account data'
+              executable:
+                type: boolean
+                description: 'Whether the account is executable'
+
+      # Solana NFT metadata query (using Solana Mainnet payment)
+      - name: nft-metadata
+        path: '/api/nft/metadata'
+        method: 'POST'
+        payment: solana-mainnet  # Using Solana Mainnet
+        price: '0.01'  # $0.01 USDC
+        timeout_ms: 60000
+        metadata:
+          discoverable: true
+          description: 'Fetch NFT metadata from Solana blockchain with detailed token information'
+
+          inputSchema:
+            bodyParams:
+              mintAddress:
+                type: string
+                description: 'NFT mint address'
+                required: true
+                example: 'J1S9H3QjnRtBbbuD4HjPV6RpRhwuk4zKbxsnCHuTgh9w'
+              includeAttributes:
+                type: boolean
+                description: 'Include detailed attributes and traits'
+                default: true
+              includeOwner:
+                type: boolean
+                description: 'Include current owner information'
+                default: false
+
+          outputSchema:
+            type: object
+            properties:
+              mint:
+                type: string
+                description: 'NFT mint address'
+              name:
+                type: string
+                description: 'NFT name'
+              symbol:
+                type: string
+                description: 'NFT symbol'
+              uri:
+                type: string
+                description: 'Metadata URI'
+              attributes:
+                type: array
+                items:
+                  type: object
+                description: 'NFT attributes and traits'
+              owner:
+                type: string
+                description: 'Current owner address (if requested)'
+              collection:
+                type: object
+                description: 'Collection information'
