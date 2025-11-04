@@ -6,10 +6,10 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx src/index.ts",
-    "dev:bun": "bun run src/index.bun.ts",
-    "start": "node dist/index.js",
-    "start:bun": "bun run src/index.bun.ts",
+    "dev": "bun run src/index.bun.ts",
+    "dev:node": "tsx src/index.ts",
+    "start": "bun run src/index.bun.ts",
+    "start:node": "node dist/index.js",
     "clean": "rm -rf dist"
   },
   "keywords": [
