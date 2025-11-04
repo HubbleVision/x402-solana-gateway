@@ -310,6 +310,17 @@ export const RouterConfigSchema = z.object({
     .default([]),
 
   /**
+   * Additional headers to forward to upstream service
+   * These headers will be added to all requests forwarded through this router
+   * Useful for authentication keys, API keys, etc.
+   * Example: { "hubble-api-key": "mykey", "authorization": "Bearer token" }
+   */
+  headers: z
+    .record(z.string(), z.string())
+    .optional()
+    .default({}),
+
+  /**
    * Protected endpoint configuration
    */
   x402_config: z

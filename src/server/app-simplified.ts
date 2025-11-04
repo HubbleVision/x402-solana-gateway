@@ -564,7 +564,7 @@ async function handleProtectedRequest(c: any, router: RouterConfig, endpoint: Pr
 
     // Forward to upstream service
     const upstreamUrl = router.proxy_pass;
-    const targetUrl = `${upstreamUrl}${router.path}${endpoint.path}`;
+    const targetUrl = `${upstreamUrl}${endpoint.path}`;
 
     console.log(`   Forwarding to: ${targetUrl}`);
     console.log(`   Method: ${c.req.method}`);
@@ -574,6 +574,15 @@ async function handleProtectedRequest(c: any, router: RouterConfig, endpoint: Pr
     for (const [key, value] of Object.entries(c.req.header())) {
       if (!['host', 'connection', 'content-length'].includes(key.toLowerCase()) && value) {
         headers.set(key, value as string);
+      }
+    }
+
+    // Add configured headers from router
+    if (router.headers) {
+      console.log(`   Adding configured headers: ${Object.keys(router.headers).length}`);
+      for (const [key, value] of Object.entries(router.headers)) {
+        headers.set(key, value);
+        console.log(`     ${key}: ${value.substring(0, 20) + (value.length > 20 ? '...' : '')}`);
       }
     }
 
@@ -648,7 +657,9 @@ async function proxyRequest(c: any, router: RouterConfig) {
     console.log(`🔄 Proxying request to upstream: ${router.proxy_pass}`);
 
     const url = new URL(c.req.url);
-    const targetUrl = `${router.proxy_pass}${url.pathname}${url.search}`;
+    // Remove router path prefix from the pathname
+    const cleanPathname = url.pathname.replace(router.path, '');
+    const targetUrl = `${router.proxy_pass}${cleanPathname}${url.search}`;
 
     console.log(`   Target URL: ${targetUrl}`);
     console.log(`   Method: ${c.req.method}`);
@@ -680,6 +691,15 @@ async function proxyRequest(c: any, router: RouterConfig) {
     for (const [key, value] of Object.entries(c.req.header())) {
       if (!['host', 'connection', 'content-length'].includes(key.toLowerCase()) && value) {
         headers.set(key, value as string);
+      }
+    }
+
+    // Add configured headers from router
+    if (router.headers) {
+      console.log(`   Adding configured headers: ${Object.keys(router.headers).length}`);
+      for (const [key, value] of Object.entries(router.headers)) {
+        headers.set(key, value);
+        console.log(`     ${key}: ${value.substring(0, 20) + (value.length > 20 ? '...' : '')}`);
       }
     }
 
